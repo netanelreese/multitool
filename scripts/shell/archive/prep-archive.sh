@@ -12,8 +12,9 @@ fi
 
 # Set the directories for checksums and PAR2 files
 SOURCE="$(pwd)/source/"
-CHECKSUM_DEST="./dest/checksum/"
-PAR2_DEST="./dest/parchive"
+CHECKSUM_DEST="$(pwd)/dest/checksum/"
+PAR2_DEST="$(pwd)/dest/parchive"
+SIG_DEST="$(pwd)/dest/signature"
 
 # Create directories if they don't exist
 mkdir -p "${CHECKSUM_DEST}" || { echo "Failed to create checksum directory"; exit 1; }
@@ -24,11 +25,11 @@ find "${SOURCE}" -type f -not -path "${CHECKSUM_DEST}/*" -not -path "${PAR2_DEST
     # Generate checksum and store in CHECKSUM_DEST
     checksum_file="${CHECKSUM_DEST}/$(basename "${file}").sha256"
     sha256sum "${file}" > "${checksum_file}" || echo "Checksum failed for ${file}"
+    # Create a signature on checksum
+    gpg --output "${SIG_DEST}/${checksum_file}.gpg --sign "${checksum_file}"
 
-    # Generate PAR2 file with 10% redundancy and store in PAR2_DEST
-    pushd ${PAR2_DEST}
-    par2 create -r32 -v "${file}" || echo "PAR2 creation failed for ${file}"
-    popd
+    # Generate PAR2 file with 30% redundancy and store in PAR2_DEST
+    par2 create -r30 -v "${file}" || echo "PAR2 creation failed for ${file}"
 done
 
 find "${SOURCE}" -name "*.par2" -print0 | while IFS= read -r -d '' file; do
